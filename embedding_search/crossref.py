@@ -4,19 +4,23 @@ from embedding_search.utils import timeout
 
 
 @timeout
-def get_abstract(doi: str) -> str | None:
+def query_crossref(doi: str) -> tuple[str | None, int | None]:
     """Get abstract from Crossref."""
     api_url = f"https://api.crossref.org/works/{doi}"
     response = requests.get(api_url)
 
-    if response.status_code == 200:
-        data = response.json()
-
-        if "abstract" not in data["message"]:
-            return None
-        return data["message"]["abstract"]
-    else:
+    if response.status_code != 200:
         return None
+
+    data = response.json()
+    abstract = data["message"]["abstract"] if data["message"]["abstract"] else None
+    cited_by = (
+        data["message"]["is-referenced-by-count"]
+        if data["message"]["is-referenced-by-count"]
+        else None
+    )
+
+    return abstract, cited_by
 
 
 # Basic abstract cleaning functions
