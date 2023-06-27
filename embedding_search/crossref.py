@@ -10,15 +10,22 @@ def query_crossref(doi: str) -> tuple[str | None, int | None]:
     response = requests.get(api_url)
 
     if response.status_code != 200:
-        return None
+        return None, None
 
     data = response.json()
-    abstract = data["message"]["abstract"] if data["message"]["abstract"] else None
-    cited_by = (
-        data["message"]["is-referenced-by-count"]
-        if data["message"]["is-referenced-by-count"]
-        else None
-    )
+
+    if "message" not in data:
+        return None, None
+
+    if "abstract" not in data["message"]:
+        abstract = None
+    else:
+        abstract = data["message"]["abstract"]
+
+    if "is-referenced-by-count" not in data["message"]:
+        cited_by = None
+    else:
+        cited_by = data["message"]["is-referenced-by-count"]
 
     return abstract, cited_by
 
