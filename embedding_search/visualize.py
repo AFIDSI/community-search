@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 import altair as alt
@@ -19,6 +20,7 @@ class EmbeddingsProcessor:
         # embed query
         query_embedded = self.store.embeddings.embed_query(query)
         query_embedded = np.array(query_embedded).reshape(1, -1)
+        logging.debug(f"query_embedded: {query_embedded.shape}")
 
         # data[0] is query, data[1:] are the rest of the embeddings in the store with authors and articles
         embeddings = np.array(self.store.vectors)
@@ -54,6 +56,13 @@ class EmbeddingsProcessor:
         df["label"] = label
         df["parent_orcid"] = parent_orcid
         df["cited_by"] = cited_by
+
+        # Update author's cited_by with the sum of all their articles' cited_by
+        author_cited_by = df.groupby("parent_orcid")["cited_by"].sum().to_dict()
+        df.loc[df["type"] == "author", "cited_by"] = df.parent_orcid.map(
+            author_cited_by
+        )
+
         return df
 
 
