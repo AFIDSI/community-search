@@ -116,19 +116,37 @@ class MiniStore:
 
         return self._search(query, top_k, ignore_idx, constructor_fn)
 
-    def weighted_search_author(
-        self, query: str, top_k: int = 3, n_pool: int = 30
-    ) -> list[Author]:
-        """Search for community user who published most related articles."""
+    def weighted_search_author(self, query: str, top_k: int = 3) -> list[Author]:
+        """Search for community user who published most related articles.
 
-        # Create a pool of articles
-        articles = self.search(query, type="article", top_k=n_pool)
+        Each author is given by a score, defined as the 1-distance weighted sum of cosine similarity between the query and the author's articles.
 
-        author_counts = {}
-        for article in articles:
-            orcid = article.author_orcid
-            author_counts[orcid] = author_counts.get(orcid, 0) + 1
-        logging.info(author_counts)
+        """
 
-        sorted_authors = sort_key_by_value(author_counts, reversed=True)
-        return [get_author(orcid) for orcid in sorted_authors[:top_k]]
+        # Calculate similarity weights = 1 - distance
+        query_embedding = self.embeddings.embed_query(query)
+        distances = cdist([query_embedding], self.vectors, metric=self.metric).squeeze()
+        weights = 1 - distances
+
+        # Calculate weighted sum in each author
+        author_scores = {}
+        for metadata, weight in zip(self.metadata, weights):
+            # Skip author level distance to avoid double counting
+            if metadata["type"] != "article":
+                continue
+            orcid = metadata["author_orcid"]
+            author_scores[orcid] = author_scores.get(orcid, 0) + weight
+
+        logging.debug(author_scores)
+
+        # Sort by score
+        top_orcids = sort_key_by_value(author_scores, reversed=True)[:top_k]
+
+        # Return authors with scores
+        authors = []
+        for orcid in top_orcids:
+            author = get_author(orcid)
+            author.weighted_score = author_scores[orcid]
+            authors.append(author)
+
+        return authors
