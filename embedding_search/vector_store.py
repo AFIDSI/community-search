@@ -96,7 +96,11 @@ class MiniStore:
             metadata = self.metadata[i]
             logging.info(metadata)
             output = constructor_fn(
-                **{k: v for k, v in metadata.items() if k != "type"}
+                **{
+                    k: v
+                    for k, v in metadata.items()
+                    if k not in ("type", "author_orcid")
+                }
             )
             output.distance = distances[i]
             outputs.append(output)
