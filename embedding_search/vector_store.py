@@ -116,17 +116,45 @@ class MiniStore:
 
         return self._search(query, top_k, ignore_idx, constructor_fn)
 
-    def weighted_search_author(self, query: str, top_k: int = 3) -> list[Author]:
+    def weighted_search_author(
+        self,
+        query: str,
+        top_k: int = 3,
+        distance_threshold: float = 0.2,
+        pow: float = 3,
+    ) -> list[Author]:
         """Search for community user who published most related articles.
 
-        Each author is given by a score, defined as the 1-distance weighted sum of cosine similarity between the query and the author's articles.
+        Each author is given by a score, defined as:
+        $$ S_j = \sum_{i=1}^n (1 - d_{i,j})^p $$
 
+        where $d_{i,j}$ is the distance between the query and the $i$-th article of the $j$-th author.
+        The value $d$ is also clipped by the `distance_threshold` $t$, i.e.,
+
+        $$
+        d = 
+        \begin{cases} 
+        d & \text{if } d \leq t \\
+        1 & \text{if } d > t 
+        \end{cases}
+        $$
         """
 
         # Calculate similarity weights = 1 - distance
         query_embedding = self.embeddings.embed_query(query)
         distances = cdist([query_embedding], self.vectors, metric=self.metric).squeeze()
+
+        # Clip distance
+        distances[distances > distance_threshold] = 1
+
+        # Calculate weights (The large distance articles now has 0 weight)
         weights = 1 - distances
+
+        logging.debug(f"Contributed papers: {sum(weights > 0)}")
+
+        # Place more emphasis on the articles that are most similar
+        # by drastically reducing the significance of those with smaller relevance.
+        weights = weights**pow
 
         # Calculate weighted sum in each author
         author_scores = {}
