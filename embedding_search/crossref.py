@@ -16,11 +16,17 @@ def query_crossref(doi: str, fields: list[str]) -> dict | None:
     if "message" not in data:
         return None
 
+    def _flatten(x: list) -> any:
+        if len(x) == 1:
+            return x[0]
+        else:
+            return x
+
     def _get_field(field_name):
         if field_name not in data["message"]:
             return None
         else:
-            return data["message"][field_name]
+            return _flatten(data["message"][field_name])
 
     output = {}
     for field in fields:
