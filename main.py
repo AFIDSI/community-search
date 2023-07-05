@@ -14,11 +14,11 @@ AUTHORS_DIR = Path("authors/")
 COMMUNITY_DF = download_datafile()
 
 
-def list_downloaded_authors() -> list[str]:
+def list_downloaded_authors() -> list[int]:
     """List downloaded authors."""
 
     downloaded = AUTHORS_DIR.glob("*.json")
-    return [author.stem for author in downloaded]
+    return [int(author.stem) for author in downloaded]
 
 
 # def append_community_info(author: Author) -> Author:
@@ -59,14 +59,12 @@ def parse_article(article: dict) -> Article:
     return article
 
 
-def download_one_author(author: dict) -> None:
+def download_one_author(
+    id: int, first_name: str, last_name: str, unit_id: int | None = None
+) -> None:
     """Parse an author from the academic analytics API."""
-    author = Author(
-        id=author["id"],
-        first_name=author["firstName"].title(),
-        last_name=author["lastName"].title(),
-    )
 
+    author = Author(id=id, unit_id=unit_id, first_name=first_name, last_name=last_name)
     articles = get_articles(author.id)
     author.articles = [parse_article(article) for article in tqdm(articles)]
 
@@ -83,13 +81,22 @@ def download_authors(overwrite: bool = False) -> None:
     downloaded = [] if overwrite else list_downloaded_authors()
 
     units = get_units()
-    for unit in units:
-        faculties = get_faculties(unit["unitId"])
-        for faculty in faculties:
+
+    for i, unit in enumerate(units):
+        unit_id = unit["unitId"]
+        faculties = get_faculties(unit_id)
+        for j, faculty in enumerate(faculties):
+            print(f"Processing unit {i+1}/{len(units)}; faculty {j+1}/{len(faculties)}")
             if faculty["id"] in downloaded:
+                print(f"Skipping {faculty['id']} because it's already downloaded.")
                 continue
             try:
-                download_one_author(faculty)
+                download_one_author(
+                    id=faculty["id"],
+                    first_name=faculty["firstName"],
+                    last_name=faculty["lastName"],
+                    unit_id=unit_id,
+                )
             except Exception as e:
                 print(f"Error downloading {faculty['id']}: {e}")
                 continue

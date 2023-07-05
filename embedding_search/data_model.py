@@ -1,5 +1,5 @@
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 
 class Article(BaseModel):
@@ -25,11 +25,20 @@ class Author(BaseModel):
     """An author object."""
 
     id: int | None = None
+    unit_id: int | None = None
     first_name: str | None = None
     last_name: str | None = None
     community_name: str | None = None
     articles: list[Article] | None = None
     articles_embeddings: list[list[float]] | None = None
+
+    @validator("first_name", pre=True)
+    def first_name_title_case(cls, v):
+        return v.title()
+
+    @validator("last_name", pre=True)
+    def last_name_title_case(cls, v):
+        return v.title()
 
     @property
     def texts(self) -> list[str]:
