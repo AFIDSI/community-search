@@ -44,6 +44,7 @@ def append_embeddings(author: Author) -> Author:
 
 def parse_article(article: dict) -> Article:
     """Parse an article from the academic analytics API."""
+
     article = Article(
         doi=article["digitalObjectIdentifier"],
         title=article["title"],
@@ -66,7 +67,15 @@ def download_one_author(
 
     author = Author(id=id, unit_id=unit_id, first_name=first_name, last_name=last_name)
     articles = get_articles(author.id)
-    author.articles = [parse_article(article) for article in tqdm(articles)]
+
+    valid_articles = []
+    for article in tqdm(articles):
+        try:
+            valid_articles.append(parse_article(article))
+        except Exception:
+            continue
+
+    author.articles = valid_articles
 
     if author.articles:
         author = append_embeddings(author)
