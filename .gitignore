@@ -1,6 +1,7 @@
 .streamlit/secrets.toml
 tmp/
 authors-bak/
+authors-backup/
 authors.bak/
 # Byte-compiled / optimized / DLL files
 __pycache__/
