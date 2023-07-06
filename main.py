@@ -42,8 +42,13 @@ def append_embeddings(author: Author) -> Author:
     return author
 
 
-def parse_article(article: dict) -> Article:
-    """Parse an article from the academic analytics API."""
+def parse_article(article: dict, cited_by: bool = False) -> Article:
+    """Parse an article from the academic analytics API.
+
+    Args:
+        article: dict, article data from academic analytics API
+        cited_by: bool, whether to get cited by count from crossref
+    """
 
     article = Article(
         doi=article["digitalObjectIdentifier"],
@@ -52,11 +57,13 @@ def parse_article(article: dict) -> Article:
     )
 
     # Get cited by count from crossref
-    if article.doi:
-        crossref_data = query_crossref(article.doi, fields=["is-referenced-by-count"])
-        if crossref_data["is-referenced-by-count"] is not None:
-            article.cited_by = crossref_data["is-referenced-by-count"]
+    if not (cited_by and article.doi):
+        return article
 
+    # Try to get cited by count from crossref
+    crossref_data = query_crossref(article.doi, fields=["is-referenced-by-count"])
+    if crossref_data["is-referenced-by-count"] is not None:
+        article.cited_by = crossref_data["is-referenced-by-count"]
     return article
 
 
@@ -96,7 +103,7 @@ def download_authors(overwrite: bool = False) -> None:
         faculties = get_faculties(unit_id)
         for j, faculty in enumerate(faculties):
             print(f"Processing unit {i+1}/{len(units)}; faculty {j+1}/{len(faculties)}")
-            if faculty["id"] in downloaded:
+            if int(faculty["id"]) in downloaded:
                 print(f"Skipping {faculty['id']} because it's already downloaded.")
                 continue
             try:
