@@ -31,6 +31,7 @@ class Author(BaseModel):
     community_name: str | None = None
     articles: list[Article] | None = None
     articles_embeddings: list[list[float]] | None = None
+    similarity: float | None = None
 
     @validator("first_name", pre=True)
     def first_name_title_case(cls, v):
